@@ -5,7 +5,7 @@ import os
 import numpy as np
 from dataProcess import process_depth_data, process_dem_data, raindata_process, normalization, data_process, data_augmentation_depth, data_augmentation_main
 import pylab as plt
-from def_iin2 import classify_depth,build_pgnn_classification_model,build_classification_model
+from def_iin2_two import classify_depth, build_pgnn_classification_model, build_classification_model
 import matplotlib
 from sklearn.metrics import precision_score, recall_score, f1_score, cohen_kappa_score
 import pandas as pd
@@ -13,9 +13,7 @@ import pandas as pd
 matplotlib.use('Agg')  # 不依赖图形界面，只保存文件
 
 # ==================== 水深分类配置 ====================
-DEPTH_THRESHOLDS = [0.15, 0.5]  # 分类阈值(米)
-NUM_CLASSES = len(DEPTH_THRESHOLDS) + 2
-
+NUM_CLASSES = 2   # ✅ 二分类：0=无水，1=有水
 
 
 # ==================== 主程序 ====================
@@ -35,7 +33,6 @@ if __name__ == "__main__":
     rowNum, colNum = 656, 650
     scnNum, rain_period = 36, 12
     patch_row_col_Num = 64
-    # sample_per_scn = 50
     inpFea_num = 7
     
     # 初始化数据矩阵
@@ -61,13 +58,21 @@ if __name__ == "__main__":
     depth = process_depth_data(depth_folder)
     
     impossible_mask = (building == 1) | (dem == -9999)
+
+    # ✅ 二分类版 classify_depth
+    def classify_depth(depth_data, impossible_mask):
+        classified = np.zeros_like(depth_data, dtype=np.uint8)  # 默认 0=无水
+        valid = ~impossible_mask
+        classified[valid & (depth_data > 0)] = 1                # 大于0的就是 1=有水
+        return classified
+
     # 数据预处理
-    depth_class = classify_depth(depth, impossible_mask)  # 水深分类
+    depth_class = classify_depth(depth, impossible_mask)  # 水深二分类
     np.place(dem, dem==-9999, np.max(dem))
     np.place(depth, depth==-9999, 0)
     np.place(slope, slope==-9999, 0)
-    np.place(junction, junction==0, 1)      # 有井口 → 1
-    np.place(junction, junction==-9999, 0)      # 无井口 → 0
+    np.place(junction, junction==0, 1)      
+    np.place(junction, junction==-9999, 0)  
     np.place(aspect, aspect==-9999, 0)
     np.place(curvature, curvature==-9999, 0)
     np.place(building, building==-9999, 0)
@@ -80,7 +85,6 @@ if __name__ == "__main__":
     aspect = normalization(aspect)
     curvature = normalization(curvature)
     pipe = normalization(pipe)
-    
 
     # ---------------- 提前计算所有有效坐标 ----------------
     def build_coords(depth_vol, patch_size=64, stride=32):
@@ -160,13 +164,10 @@ if __name__ == "__main__":
             self.num_classes = num_classes
             self.save_interval = save_interval
             self.history_metrics = []
-
             os.makedirs(self.save_dir, exist_ok=True)
 
         def on_epoch_end(self, epoch, logs=None):
-            # 预测验证集
-            y_true_all = []
-            y_pred_all = []
+            y_true_all, y_pred_all = [], []
             for (cov_patch, rain_vec), y_true in self.val_data:
                 preds = self.model.predict((cov_patch, rain_vec), verbose=0)
                 preds = np.argmax(preds, axis=-1)
@@ -177,7 +178,6 @@ if __name__ == "__main__":
             y_true_all = np.concatenate(y_true_all)
             y_pred_all = np.concatenate(y_pred_all)
 
-            # 计算指标
             acc = np.mean(y_true_all == y_pred_all)
             precision = precision_score(y_true_all, y_pred_all, average='weighted', zero_division=0)
             recall = recall_score(y_true_all, y_pred_all, average='weighted', zero_division=0)
@@ -194,10 +194,8 @@ if __name__ == "__main__":
             }
             self.history_metrics.append(metrics_row)
 
-            # 打印
             print(f"\n[Epoch {epoch+1}] val_acc={acc:.4f} | precision={precision:.4f} | recall={recall:.4f} | f1={f1:.4f} | kappa={kappa:.4f}")
 
-            # 每 save_interval 个epoch保存一次到CSV
             if (epoch + 1) % self.save_interval == 0:
                 df = pd.DataFrame(self.history_metrics)
                 csv_path = os.path.join(self.save_dir, "metrics_log.csv")
@@ -213,7 +211,6 @@ if __name__ == "__main__":
     )
     model.summary()
 
-    # 创建回调
     metrics_logger = MetricsLogger(
         val_data=val_ds,
         save_dir='result4/测试',
@@ -221,7 +218,6 @@ if __name__ == "__main__":
         save_interval=10
     )
 
-    # 训练
     history = model.fit(
         train_ds,
         epochs=100,
@@ -229,8 +225,7 @@ if __name__ == "__main__":
         callbacks=[metrics_logger]
     )
 
-    # 保存模型
-    model.save('result3/no_pgnn/modelSaver_pgnn_classification_ok.h5')
+    model.save('result4/测试/modelSaver_pgnn_classification_ok.h5')
 
     # 绘制训练曲线
     import matplotlib.pyplot as plt
@@ -253,6 +248,5 @@ if __name__ == "__main__":
     plt.legend()
 
     plt.tight_layout()
-    plt.savefig('result3/no_pgnn/pgnn_classification_performance.png')
+    plt.savefig('result4/测试/pgnn_classification_performance.png')
     plt.show()
-
