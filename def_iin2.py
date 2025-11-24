@@ -194,13 +194,13 @@ def build_pgnn_classification_model(input_shape=(64,64,7), rain_period=12):
 
     # 物理特征和降雨特征融合
     # x = physical_constraints_module(dem, slope, aspect, curvature, building, pipe, junction)   # 64 通道
-    # ========== 1️⃣ 第一次 PGNN（原分辨率 64×64） ==========
+    # ========== 1️ 第一次 PGNN（原分辨率 64×64） ==========
     phy_64 = physical_constraints_module(dem, slope, aspect, curvature, building, pipe, junction)
     x = Conv2D(32, (3,3), padding='same', activation='relu')(main_input)
     x = Concatenate(axis=-1)([x, phy_64])              # 融合第一次 PGNN
     x = Conv2D(64, (1,1), padding='same')(x)           # 统一通道
 
-    # ========== 2️⃣ 下采样到 32×32，第二次 PGNN ==========
+    # ========== 2️ 下采样到 32×32，第二次 PGNN ==========
     x = enhanced_separable_block(x, 64, 3, strides=2)  # 32×32
     dem_32 = AveragePooling2D((2,2))(dem)
     slope_32 = AveragePooling2D((2,2))(slope)
@@ -215,7 +215,7 @@ def build_pgnn_classification_model(input_shape=(64,64,7), rain_period=12):
     x = Concatenate(axis=-1)([x, phy_32])
     x = Conv2D(128, (1,1), padding='same')(x)
 
-    # ========== 3️⃣ 下采样到 16×16，第三次 PGNN ==========
+    # ========== 3️ 下采样到 16×16，第三次 PGNN ==========
     x = enhanced_separable_block(x, 128, 3, strides=2)  # 16×16
     dem_16 = AveragePooling2D((4,4))(dem)
     slope_16 = AveragePooling2D((4,4))(slope)
@@ -230,7 +230,7 @@ def build_pgnn_classification_model(input_shape=(64,64,7), rain_period=12):
     x = Concatenate(axis=-1)([x, phy_16])
     x = Conv2D(256, (1,1), padding='same')(x)
 
-    # ========== 4️⃣ 上采样回 64×64，第四次 PGNN ==========
+    # ========== 4️ 上采样回 64×64，第四次 PGNN ==========
     x = UpSampling2D((2,2))(x)   # 32×32
     x = Concatenate()([x, phy_32])
     x = UpSampling2D((2,2))(x)   # 64×64
