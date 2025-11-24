@@ -134,7 +134,6 @@ if __name__ == "__main__":
         return ds
 
     # ---------------- 主程序 ----------------
-    # ✅ 拼协变量
     covariates = np.stack([
         dem, junction, slope, aspect,
         curvature, building, pipe
@@ -202,7 +201,7 @@ if __name__ == "__main__":
                 df = pd.DataFrame(self.history_metrics)
                 csv_path = os.path.join(self.save_dir, "metrics_log.csv")
                 df.to_csv(csv_path, index=False)
-                print(f"✅ Metrics saved to {csv_path}")
+                print(f" Metrics saved to {csv_path}")
 
     # =============================
     # 构建 & 训练模型
@@ -255,4 +254,5 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig('result3/no_pgnn/pgnn_classification_performance.png')
     plt.show()
+
 
