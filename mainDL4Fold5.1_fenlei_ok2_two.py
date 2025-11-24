@@ -13,7 +13,7 @@ import pandas as pd
 matplotlib.use('Agg')  # 不依赖图形界面，只保存文件
 
 # ==================== 水深分类配置 ====================
-NUM_CLASSES = 2   # ✅ 二分类：0=无水，1=有水
+NUM_CLASSES = 2   # 二分类：0=无水，1=有水
 
 
 # ==================== 主程序 ====================
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     
     impossible_mask = (building == 1) | (dem == -9999)
 
-    # ✅ 二分类版 classify_depth
+    # 二分类版 classify_depth
     def classify_depth(depth_data, impossible_mask):
         classified = np.zeros_like(depth_data, dtype=np.uint8)  # 默认 0=无水
         valid = ~impossible_mask
@@ -138,7 +138,7 @@ if __name__ == "__main__":
         return ds
 
     # ---------------- 主程序 ----------------
-    # ✅ 拼协变量
+    # 拼协变量
     covariates = np.stack([
         dem, junction, slope, aspect,
         curvature, building, pipe
@@ -200,7 +200,7 @@ if __name__ == "__main__":
                 df = pd.DataFrame(self.history_metrics)
                 csv_path = os.path.join(self.save_dir, "metrics_log.csv")
                 df.to_csv(csv_path, index=False)
-                print(f"✅ Metrics saved to {csv_path}")
+                print(f"Metrics saved to {csv_path}")
 
     # =============================
     # 构建 & 训练模型
@@ -250,3 +250,4 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig('result4/测试/pgnn_classification_performance.png')
     plt.show()
+
